@@ -3353,22 +3353,12 @@ connection.disconnect()
 - `traceroute <ip>` - Trace packet path
 - `show cdp neighbors` - View connected devices
 - `show version` - IOS version and hardware info
-
-#### Study Strategy
-1. **Hands-on practice**: Use Packet Tracer extensively
-2. **Understand concepts**: Don't just memorize commands
-3. **Layer approach**: Think in terms of OSI model
-4. **Practice subnetting**: Until it's automatic
-5. **Know troubleshooting**: Use systematic methodology
-6. **Review wrong answers**: Learn from mistakes
-7. **Time management**: Don't spend too long on one question
-8. **Read carefully**: Questions may have tricky wording
-
+  
 ---
 
 ## Summary
 
-These notes cover the core topics for CCNA certification:
+These notes should cover the core topics for NETA:
 
 ✅ Network fundamentals and history  
 ✅ OSI and TCP/IP models  
@@ -3382,28 +3372,3 @@ These notes cover the core topics for CCNA certification:
 ✅ Network management  
 ✅ Security fundamentals  
 ✅ Automation and cloud concepts  
-
-**Good luck with your CCNA studies!** Remember: practice, understand concepts, and use the troubleshooting methodology. The CCNA certification opens doors to exciting networking careers.→ Subnet 65,535
-```
-
-**Simplified notation:**
-```
-2001:db8:acad:1::/64
-2001:db8:acad:2::/64
-2001:db8:acad:10::/64
-2001:db8:acad:A5::/64
-```
-
-#### Enterprise Subnet Planning
-
-**Scenario**: Company receives 2001:db8:acad::/48
-
-**Allocation example:**
-```
-2001:db8:acad:0001::/64  → Building 1, Floor 1
-2001:db8:acad:0002::/64  → Building 1, Floor 2
-2001:db8:acad:0100::/64  → Building 2, Floor 1
-2001:db8:acad:0200::/64  → Building 3, Floor 1
-2001:db8:acad:1000::/64  → Data center
-2001:db8:acad:2000::/64  → Guest network
-2001:db8:acad:FFFF::/64
