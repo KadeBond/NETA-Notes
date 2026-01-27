@@ -1925,6 +1925,98 @@ Switch(config-if)# no shutdown
 Switch(config-if)# exit
 ```
 
+### VTP (VLAN Trunking Protocol)
+
+#### What is VTP?
+
+**VTP (VLAN Trunking Protocol)** is a Cisco proprietary protocol that manages VLAN configuration across multiple switches.
+
+**Purpose:**
+- Centralized VLAN management
+- Ensures consistency across switches
+- Reduces configuration errors
+- Easier to scale large networks
+
+#### VTP Modes
+
+**1. VTP Server Mode**
+- Can create/modify/delete VLANs
+- Propagates changes to other switches
+- Stores VLAN config in NVRAM
+- Default mode on Cisco switches
+
+**2. VTP Client Mode**
+- Cannot create/modify/delete VLANs
+- Receives and forwards VTP advertisements
+- Does NOT store VLAN config in NVRAM
+- Gets configuration from server
+
+**3. VTP Transparent Mode**
+- Can create/modify/delete VLANs locally
+- Forwards VTP advertisements but doesn't participate
+- Stores VLAN config locally
+- Changes not propagated to other switches
+
+**4. VTP Off Mode**
+- Doesn't forward VTP advertisements
+- Completely isolated from VTP domain
+
+#### VTP Configuration
+
+**VTP Server:**
+```
+Switch(config)# vtp mode server
+Switch(config)# vtp domain COMPANY
+Switch(config)# vtp password SecurePass123
+Switch(config)# vtp version 2
+Switch(config)# vtp pruning
+```
+
+**VTP Client:**
+```
+Switch(config)# vtp mode client
+Switch(config)# vtp domain COMPANY
+Switch(config)# vtp password SecurePass123
+```
+
+**VTP Transparent:**
+```
+Switch(config)# vtp mode transparent
+Switch(config)# vtp domain COMPANY
+```
+
+**Verification:**
+```
+show vtp status
+show vtp counters
+show vtp password
+```
+
+#### Important VTP Concepts
+
+**Configuration Revision Number:**
+- Tracks VLAN database changes
+- Higher revision = more recent config
+- **DANGER:** Switch with higher revision overwrites others
+
+**Reset revision number (before adding switch to network):**
+```
+Switch(config)# vtp domain TEMP
+Switch(config)# vtp domain COMPANY
+```
+
+**VTP Pruning:**
+- Reduces unnecessary broadcast traffic
+- Removes unneeded VLANs from trunk links
+- Enable on VTP server only
+
+#### Modern Best Practice
+Many engineers now use **VTP transparent mode** on all switches:
+- Prevents accidental VLAN deletion
+- No risk from rogue switches
+- More predictable and controllable
+- Configure VLANs manually on each switch
+
 ### Switch Security
 
 #### Port Security
@@ -2108,6 +2200,144 @@ show etherchannel summary
 show etherchannel port-channel
 show interfaces port-channel 1
 ```
+
+### EtherChannel
+
+#### Purpose
+- **Combines multiple physical links** into one logical link
+- **Increases bandwidth**: Up to 8 links
+- **Provides redundancy**: If one link fails, others continue
+
+#### Protocols
+- **PAgP (Port Aggregation Protocol)**: Cisco proprietary
+- **LACP (Link Aggregation Control Protocol)**: IEEE 802.3ad, industry standard
+
+#### Configuration
+
+**LACP (Recommended):**
+```
+Switch(config)# interface range g0/1-2
+Switch(config-if-range)# channel-group 1 mode active
+Switch(config-if-range)# exit
+
+Switch(config)# interface port-channel 1
+Switch(config-if)# switchport mode trunk
+Switch(config-if)# switchport trunk allowed vlan 10,20,99
+```
+
+**PAgP:**
+```
+Switch(config)# interface range g0/1-2
+Switch(config-if-range)# channel-group 1 mode desirable
+```
+
+**Modes:**
+- **LACP**:
+  - `active`: Actively negotiates (recommended)
+  - `passive`: Waits for negotiation
+- **PAgP**:
+  - `desirable`: Actively negotiates
+  - `auto`: Waits for negotiation
+
+**Verification:**
+```
+show etherchannel summary
+show etherchannel port-channel
+show interfaces port-channel 1
+```
+
+### HSRP, VRRP, and GLBP (First Hop Redundancy Protocols)
+
+#### Purpose
+Provide **default gateway redundancy** - if one router fails, another takes over seamlessly.
+
+#### HSRP (Hot Standby Router Protocol)
+
+**Cisco proprietary**
+
+**How it works:**
+- Multiple routers share a **virtual IP address**
+- One router is **active**, others are **standby**
+- Hosts use virtual IP as default gateway
+- If active fails, standby becomes active (3-second switchover)
+
+**Configuration:**
+```
+Router1(config)# interface g0/0
+Router1(config-if)# ip address 192.168.1.2 255.255.255.0
+Router1(config-if)# standby 1 ip 192.168.1.1
+Router1(config-if)# standby 1 priority 110
+Router1(config-if)# standby 1 preempt
+
+Router2(config)# interface g0/0
+Router2(config-if)# ip address 192.168.1.3 255.255.255.0
+Router2(config-if)# standby 1 ip 192.168.1.1
+Router2(config-if)# standby 1 priority 100
+```
+
+**Key concepts:**
+- **Virtual IP**: 192.168.1.1 (shared)
+- **Priority**: Higher priority = active router (default 100)
+- **Preempt**: Higher priority router takes over when it comes back online
+- **Group number**: Matches routers in same HSRP group
+
+**Verification:**
+```
+show standby
+show standby brief
+```
+
+#### VRRP (Virtual Router Redundancy Protocol)
+
+**Industry standard** (RFC 5798)
+
+**Similar to HSRP but:**
+- Open standard (works with any vendor)
+- Master/backup terminology (instead of active/standby)
+- Virtual MAC uses format: 0000.5E00.01XX
+
+**Configuration:**
+```
+Router1(config)# interface g0/0
+Router1(config-if)# ip address 192.168.1.2 255.255.255.0
+Router1(config-if)# vrrp 1 ip 192.168.1.1
+Router1(config-if)# vrrp 1 priority 110
+Router1(config-if)# vrrp 1 preempt
+```
+
+#### GLBP (Gateway Load Balancing Protocol)
+
+**Cisco proprietary**
+
+**Advantage over HSRP/VRRP:**
+- **Load balancing** - all routers forward traffic simultaneously
+- More efficient use of bandwidth
+- One virtual IP, multiple virtual MACs
+
+**Configuration:**
+```
+Router1(config)# interface g0/0
+Router1(config-if)# ip address 192.168.1.2 255.255.255.0
+Router1(config-if)# glbp 1 ip 192.168.1.1
+Router1(config-if)# glbp 1 priority 110
+Router1(config-if)# glbp 1 preempt
+Router1(config-if)# glbp 1 load-balancing round-robin
+```
+
+**Load balancing methods:**
+- Round-robin (default)
+- Weighted
+- Host-dependent
+
+**Comparison:**
+
+| Feature | HSRP | VRRP | GLBP |
+|---------|------|------|------|
+| **Vendor** | Cisco | Open standard | Cisco |
+| **Load balancing** | No | No | Yes |
+| **Active routers** | 1 | 1 | Multiple |
+| **Preempt default** | Disabled | Enabled | Disabled |
+| **Failover time** | ~3 seconds | ~3 seconds | ~3 seconds |
 
 ---
 
@@ -3353,12 +3583,22 @@ connection.disconnect()
 - `traceroute <ip>` - Trace packet path
 - `show cdp neighbors` - View connected devices
 - `show version` - IOS version and hardware info
-  
+
+#### Study Strategy
+1. **Hands-on practice**: Use Packet Tracer extensively
+2. **Understand concepts**: Don't just memorize commands
+3. **Layer approach**: Think in terms of OSI model
+4. **Practice subnetting**: Until it's automatic
+5. **Know troubleshooting**: Use systematic methodology
+6. **Review wrong answers**: Learn from mistakes
+7. **Time management**: Don't spend too long on one question
+8. **Read carefully**: Questions may have tricky wording
+
 ---
 
 ## Summary
 
-These notes should cover the core topics for NETA:
+These notes cover the core topics for CCNA certification:
 
 ✅ Network fundamentals and history  
 ✅ OSI and TCP/IP models  
@@ -3372,3 +3612,27 @@ These notes should cover the core topics for NETA:
 ✅ Network management  
 ✅ Security fundamentals  
 ✅ Automation and cloud concepts  
+
+```
+
+**Simplified notation:**
+```
+2001:db8:acad:1::/64
+2001:db8:acad:2::/64
+2001:db8:acad:10::/64
+2001:db8:acad:A5::/64
+```
+
+#### Enterprise Subnet Planning
+
+**Scenario**: Company receives 2001:db8:acad::/48
+
+**Allocation example:**
+```
+2001:db8:acad:0001::/64  → Building 1, Floor 1
+2001:db8:acad:0002::/64  → Building 1, Floor 2
+2001:db8:acad:0100::/64  → Building 2, Floor 1
+2001:db8:acad:0200::/64  → Building 3, Floor 1
+2001:db8:acad:1000::/64  → Data center
+2001:db8:acad:2000::/64  → Guest network
+2001:db8:acad:FFFF::/64
