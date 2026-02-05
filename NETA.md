@@ -1,5 +1,3 @@
----
-
 # NETA Notes
 ## Comprehensive Networking Fundamentals
 
@@ -954,6 +952,49 @@ R1(config)# ip route 0.0.0.0 0.0.0.0 209.165.200.1
 R1(config)# ip route 172.16.0.0 255.255.0.0 10.1.1.2 5
 ```
 *The "5" is administrative distance - higher than default static (1), so only used if primary route fails*
+
+**Use case:**
+- Backup WAN links
+- Redundancy without dynamic routing protocols
+- Cost-effective failover solution
+
+**Example - Primary and Backup Routes:**
+```
+R1(config)# ip route 0.0.0.0 0.0.0.0 209.165.200.1      ! Primary (AD=1)
+R1(config)# ip route 0.0.0.0 0.0.0.0 198.51.100.1 5     ! Backup (AD=5)
+```
+If primary link fails, backup route automatically activates.
+
+#### Recursive Route Lookups
+
+**What is a recursive lookup?**
+When a route specifies only a next-hop IP address (not an exit interface), the router must perform an additional lookup to find how to reach that next-hop.
+
+**Example:**
+```
+R1# show ip route
+S    172.16.0.0/16 [1/0] via 10.1.1.2
+C    10.1.1.0/30 is directly connected, GigabitEthernet0/0
+```
+
+**Lookup process:**
+1. Packet destined for 172.16.0.5 arrives
+2. Router finds route: via 10.1.1.2
+3. Router must look up 10.1.1.2 again (recursive lookup)
+4. Finds 10.1.1.2 is on directly connected network
+5. Forwards packet out GigabitEthernet0/0
+
+**Optimization - Directly Attached Routes:**
+```
+R1(config)# ip route 172.16.0.0 255.255.0.0 GigabitEthernet0/0 10.1.1.2
+```
+Specifying both interface and next-hop eliminates recursive lookup.
+
+**CEF (Cisco Express Forwarding):**
+- Pre-calculates forwarding paths
+- Stores in FIB (Forwarding Information Base)
+- Eliminates need for repeated lookups
+- Enabled by default on modern routers
 
 ### Routing Table Interpretation
 
@@ -1953,12 +1994,187 @@ Switch(config-if-range)# switchport access vlan 20
 Switch(config-if-range)# exit
 ```
 
+**Assign Ports to VLANs (Access Ports):**
+```
+Switch(config)# interface range fa0/1-10
+Switch(config-if-range)# switchport mode access
+Switch(config-if-range)# switchport access vlan 10
+Switch(config-if-range)# exit
+
+Switch(config)# interface range fa0/11-20
+Switch(config-if-range)# switchport mode access
+Switch(config-if-range)# switchport access vlan 20
+Switch(config-if-range)# exit
+```
+
+**Voice VLAN Configuration:**
+```
+Switch(config)# interface fa0/5
+Switch(config-if)# switchport mode access
+Switch(config-if)# switchport access vlan 10
+Switch(config-if)# switchport voice vlan 20
+Switch(config-if)# exit
+```
+
+**Voice VLAN Characteristics:**
+- Carries VoIP phone traffic separately from data
+- Phone has built-in switch - PC connects through phone
+- Data VLAN: PC traffic
+- Voice VLAN: Phone traffic
+- Enables QoS prioritization for voice
+- Often combined with PoE (Power over Ethernet)
+
+**Benefits:**
+- Better voice quality (QoS)
+- Network security (separate traffic)
+- Easier troubleshooting
+- Bandwidth management
+
+**Verification:**
+```
+show interfaces fa0/5 switchport
+show vlan brief
+```
+
+#### DTP (Dynamic Trunking Protocol)
+
+**Purpose:** Auto-negotiates trunk links between switches
+
+**DTP Modes:**
+
+| Mode | Behavior |
+|------|----------|
+| **access** | Permanent access port, no DTP |
+| **trunk** | Permanent trunk, sends DTP |
+| **dynamic auto** | Waits for other side to initiate trunk |
+| **dynamic desirable** | Actively tries to form trunk |
+
+**DTP Negotiation Results:**
+
+| Local Mode | Remote Mode | Result |
+|------------|-------------|--------|
+| trunk | trunk | Trunk |
+| trunk | dynamic auto | Trunk |
+| trunk | dynamic desirable | Trunk |
+| dynamic desirable | dynamic desirable | Trunk |
+| dynamic desirable | dynamic auto | Trunk |
+| dynamic auto | dynamic auto | Access |
+| access | Any | Access |
+
+**Security Risk:**
+- Attacker can negotiate trunk and access all VLANs
+- VLAN hopping attacks possible
+
+**Best Practice - Disable DTP:**
+```
+Switch(config)# interface g0/1
+Switch(config-if)# switchport mode trunk
+Switch(config-if)# switchport nonegotiate
+Switch(config-if)# exit
+
+Switch(config)# interface fa0/1
+Switch(config-if)# switchport mode access
+Switch(config-if)# switchport nonegotiate
+```
+
+**Verification:**
+```
+show interfaces g0/1 switchport
+show dtp interface g0/1
+```
+
 **Verification:**
 ```
 show vlan brief
 show vlan id 10
 show interfaces fa0/1 switchport
 show interfaces trunk
+```
+
+**Configure Trunk:**
+```
+Switch(config)# interface gigabitEthernet 0/1
+Switch(config-if)# switchport mode trunk
+Switch(config-if)# switchport trunk native vlan 99
+Switch(config-if)# switchport trunk allowed vlan 10,20,99
+Switch(config-if)# exit
+```
+
+**Best Practices:**
+- Change native VLAN from default (VLAN 1)
+- Disable DTP (Dynamic Trunking Protocol)
+- Specify allowed VLANs explicitly
+
+```
+Switch(config-if)# switchport nonegotiate
+```
+
+#### Native VLAN Security
+
+**What is Native VLAN?**
+- VLAN for untagged traffic on trunk links
+- Default: VLAN 1
+- Frames sent/received without 802.1Q tag
+
+**Security Risks:**
+
+**1. VLAN Hopping Attack (Double Tagging):**
+- Attacker on native VLAN sends double-tagged frame
+- First tag matches native VLAN (stripped by first switch)
+- Second tag directs traffic to target VLAN
+- Bypasses VLAN security
+
+**Attack Process:**
+1. Attacker crafts frame: Outer tag = VLAN 1, Inner tag = VLAN 10
+2. First switch strips outer VLAN 1 tag (native VLAN)
+3. Frame forwarded with VLAN 10 tag
+4. Second switch delivers to VLAN 10
+5. Attacker accessed restricted VLAN
+
+**2. Rogue Trunk Formation:**
+- Attacker negotiates trunk via DTP
+- Gains access to all VLANs
+
+**Mitigations:**
+
+**Change Native VLAN:**
+```
+Switch(config)# interface g0/1
+Switch(config-if)# switchport trunk native vlan 999
+```
+*Use unused VLAN number*
+
+**Tag Native VLAN Traffic:**
+```
+Switch(config)# vlan dot1q tag native
+```
+*Forces tagging even for native VLAN (prevents double-tagging attack)*
+
+**Disable DTP:**
+```
+Switch(config-if)# switchport nonegotiate
+```
+
+**Don't Use VLAN 1:**
+- Change native VLAN
+- Don't assign access ports to VLAN 1
+- Disable VLAN 1 on trunks if possible
+
+**Verification:**
+```
+show interfaces trunk
+show vlan
+```
+
+**Best Practice Configuration:**
+```
+Switch(config)# interface g0/1
+Switch(config-if)# switchport mode trunk
+Switch(config-if)# switchport nonegotiate
+Switch(config-if)# switchport trunk native vlan 999
+Switch(config-if)# switchport trunk allowed vlan 10,20,30
+Switch(config-if)# exit
+Switch(config)# vlan dot1q tag native
 ```
 
 #### Trunk Links
@@ -1993,6 +2209,55 @@ show interfaces g0/1 switchport
 ```
 Switch(config-if)# switchport nonegotiate
 ```
+
+**2. Layer 3 Switch (SVI - Switched Virtual Interfaces)**
+- Switch performs routing between VLANs
+- Faster than ROAS
+- More scalable
+
+**Layer 3 Switch Configuration:**
+```
+Switch(config)# ip routing
+
+Switch(config)# interface vlan 10
+Switch(config-if)# ip address 192.168.10.1 255.255.255.0
+Switch(config-if)# no shutdown
+Switch(config-if)# exit
+
+Switch(config)# interface vlan 20
+Switch(config-if)# ip address 192.168.20.1 255.255.255.0
+Switch(config-if)# no shutdown
+Switch(config-if)# exit
+```
+
+#### Router-on-a-Stick Limitations
+
+While ROAS is a common solution for small networks, it has several drawbacks:
+
+**Performance Issues:**
+- **Single link bottleneck**: All inter-VLAN traffic uses one physical connection
+- **Bandwidth limitation**: If link is 1 Gbps, that's shared across all VLANs
+- **Latency**: Packets must travel to router and back for inter-VLAN communication
+
+**Reliability Concerns:**
+- **Single point of failure**: If router fails, all inter-VLAN routing stops
+- **Single link failure**: If cable or interface fails, no inter-VLAN connectivity
+
+**Scalability:**
+- Not practical for large numbers of VLANs
+- Becomes complex with many subinterfaces
+- Performance degrades with increased traffic
+
+**When to Use ROAS:**
+- Small networks (< 10 VLANs)
+- Low inter-VLAN traffic
+- Budget constraints (no Layer 3 switch)
+- Temporary solution
+
+**Better Alternatives:**
+- **Layer 3 switch**: Best for most networks
+- **Dedicated routers per VLAN**: Expensive, not practical
+- **Multiple ROAS links**: Increases bandwidth but still has limitations
 
 #### Inter-VLAN Routing
 
@@ -2193,6 +2458,79 @@ Switch(config)# interface range fa0/1-24
 Switch(config-if-range)# ip dhcp snooping limit rate 10
 ```
 
+#### DHCP Snooping
+- **Purpose**: Prevent rogue DHCP servers
+- **Creates**: Binding table (IP, MAC, port, VLAN)
+
+**Configuration:**
+```
+Switch(config)# ip dhcp snooping
+Switch(config)# ip dhcp snooping vlan 10,20
+Switch(config)# interface g0/1
+Switch(config-if)# ip dhcp snooping trust
+Switch(config-if)# exit
+
+Switch(config)# interface range fa0/1-24
+Switch(config-if-range)# ip dhcp snooping limit rate 10
+```
+
+**DHCP Starvation Attack:**
+
+**What is it?**
+- Attacker sends thousands of DHCP DISCOVER messages with fake MAC addresses
+- Exhausts DHCP server's address pool
+- Legitimate clients cannot get IP addresses (Denial of Service)
+
+**Attack Process:**
+1. Attacker uses tool (e.g., Yersinia, DHCPig)
+2. Generates DISCOVER messages with random MAC addresses
+3. DHCP server responds with OFFER for each request
+4. Attacker completes DORA for all fake MACs
+5. IP pool exhausted
+6. Legitimate users denied service
+
+**Attack Goals:**
+- Deny service to legitimate users
+- Force users to use rogue DHCP server (with attacker as gateway)
+- Man-in-the-middle attack setup
+
+**Mitigation - DHCP Snooping + Port Security:**
+
+```
+! Enable DHCP snooping
+Switch(config)# ip dhcp snooping
+Switch(config)# ip dhcp snooping vlan 10,20
+
+! Trust uplink to legitimate DHCP server
+Switch(config)# interface g0/1
+Switch(config-if)# ip dhcp snooping trust
+Switch(config-if)# exit
+
+! Rate-limit DHCP requests on access ports
+Switch(config)# interface range fa0/1-24
+Switch(config-if-range)# ip dhcp snooping limit rate 10
+Switch(config-if-range)# exit
+
+! Add port security to limit MAC addresses
+Switch(config)# interface fa0/5
+Switch(config-if)# switchport port-security
+Switch(config-if)# switchport port-security maximum 2
+Switch(config-if)# switchport port-security violation restrict
+```
+
+**How Protection Works:**
+- **Rate limiting**: Prevents flood of DHCP requests
+- **Trusted ports only**: Only designated port(s) can offer DHCP
+- **Port security**: Limits MAC addresses per port
+- **Binding table**: Tracks legitimate IP-to-MAC mappings
+
+**Verification:**
+```
+show ip dhcp snooping
+show ip dhcp snooping binding
+show ip dhcp snooping statistics
+```
+
 #### Dynamic ARP Inspection (DAI)
 - **Purpose**: Prevent ARP spoofing
 - **Uses**: DHCP snooping binding table
@@ -2248,13 +2586,43 @@ Switch(config)# spanning-tree vlan 1 priority 4096
 #### PortFast and BPDU Guard
 
 **PortFast**: Skips listening/learning states for access ports
+
+**Types of PortFast:**
+
+**1. PortFast Edge (Standard PortFast)**
+- **For**: Access ports connected to end devices (PCs, printers, phones)
+- **Behavior**: Immediately transitions to forwarding state
+- **Use case**: Eliminates 30-second delay when device boots
+
 ```
 Switch(config)# interface fa0/1
 Switch(config-if)# spanning-tree portfast
 ```
 
-**BPDU Guard**: Shuts down port if BPDU received (prevents loops)
+**Or globally for all access ports:**
 ```
+Switch(config)# spanning-tree portfast default
+```
+
+**2. PortFast Network (PortFast Trunk)**
+- **For**: Ports connected to other network devices (switches, routers)
+- **Behavior**: Skips STP states but still sends/receives BPDUs
+- **Use case**: Quick convergence in specific topologies
+- **WARNING**: Use with extreme caution - can cause loops
+
+```
+Switch(config)# interface g0/1
+Switch(config-if)# spanning-tree portfast network
+```
+
+**3. PortFast BPDU Guard**
+- **For**: Protecting PortFast ports from loops
+- **Behavior**: If BPDU received on PortFast port, err-disables the port
+- **Use case**: Prevent accidental switch connections to access ports
+
+```
+Switch(config)# interface fa0/1
+Switch(config-if)# spanning-tree portfast
 Switch(config-if)# spanning-tree bpduguard enable
 ```
 
@@ -2263,6 +2631,19 @@ Switch(config-if)# spanning-tree bpduguard enable
 Switch(config)# spanning-tree portfast default
 Switch(config)# spanning-tree portfast bpduguard default
 ```
+
+**Summary:**
+
+| Feature | Use On | Purpose |
+|---------|--------|---------|
+| **PortFast Edge** | Access ports to end devices | Fast access, no loops expected |
+| **PortFast Network** | Trunk/network device ports | Quick convergence (careful!) |
+| **BPDU Guard** | PortFast enabled ports | Prevent loops if switch connected |
+
+**Best Practice:**
+- Enable PortFast Edge on all access ports
+- Always combine with BPDU Guard
+- Never use on trunk links (unless PortFast Network with specific design)
 
 #### Rapid PVST+ (RPVST+)
 - **Faster convergence**: Seconds instead of 50 seconds
@@ -2369,6 +2750,84 @@ show etherchannel summary
 show etherchannel port-channel
 show interfaces port-channel 1
 ```
+
+show etherchannel port-channel
+show interfaces port-channel 1
+```
+
+### Switch Stacking
+
+#### What is Switch Stacking?
+
+**Switch stacking** combines multiple physical switches into a single logical switch using special stacking cables or modules.
+
+**How it Works:**
+- Multiple switches connected via high-speed backplane (StackWise, FlexStack)
+- Appear as one switch with single management IP
+- One active switch acts as master, others are members
+- Automatic failover if master fails
+
+**Benefits:**
+- **Single management point**: One IP, one configuration
+- **Increased port density**: Stack of 4 switches = 4x ports
+- **High bandwidth**: Stack bandwidth typically 80-480 Gbps
+- **Simplified cabling**: Cross-stack EtherChannel possible
+- **Resiliency**: Master failure doesn't affect forwarding
+
+**Cisco Technologies:**
+- **StackWise**: Catalyst 3750, 3850 series (up to 9 switches)
+- **StackWise Virtual**: Catalyst 9000 series (dual-switch stack)
+- **FlexStack**: Catalyst 2960 series
+- **VSS (Virtual Switching System)**: Catalyst 6500 (legacy)
+
+**Stack Roles:**
+- **Master/Active**: Manages stack, runs control plane
+- **Standby**: Ready to take over if master fails
+- **Member**: Forwarding only
+
+**Configuration Example (Cisco 3850):**
+```
+! On each switch, set priority (higher = more likely to be master)
+Switch(config)# switch 1 priority 15
+Switch(config)# switch 2 priority 14
+Switch(config)# switch 3 priority 13
+
+! Set stack member number
+Switch(config)# switch 1 provision ws-c3850-24p
+
+! Renumber switch in stack
+Switch(config)# switch 2 renumber 3
+```
+
+**Verification:**
+```
+show switch
+show switch stack-ports
+show switch neighbors
+```
+
+**Comparison: Stacking vs. Standalone:**
+
+| Feature | Stacked | Standalone |
+|---------|---------|------------|
+| **Management IPs** | 1 | Multiple |
+| **Configuration** | Single | Per-device |
+| **Bandwidth between switches** | 80-480 Gbps | Depends on uplinks |
+| **Failover** | Automatic | Manual or protocol-based |
+| **Port capacity** | Combined | Individual |
+| **Cost** | Stacking modules/cables | Standard connections |
+
+**Use Cases:**
+- Access layer deployments
+- Wiring closets
+- Small to medium campuses
+- Simplified management environments
+
+**Limitations:**
+- Maximum stack size (typically 8-9 switches)
+- Proprietary technology (vendor lock-in)
+- Distance limitations (stacking cables)
+- Entire stack reboots for IOS upgrades (newer models support rolling upgrades)
 
 ### HSRP, VRRP, and GLBP (First Hop Redundancy Protocols)
 
@@ -2583,6 +3042,256 @@ Router1(config-if)# glbp 1 load-balancing round-robin
 - RADIUS server authentication
 - Certificate-based or username/password
 - Accounting and logging
+
+### Wireless Security
+
+#### Open Network
+- No security
+- Anyone can connect
+- **Never use** except for public hotspots
+
+#### WEP (Wired Equivalent Privacy)
+- **Obsolete**: Easily cracked
+- 64-bit or 128-bit keys
+- **Never use**
+
+#### WPA (Wi-Fi Protected Access)
+- Replacement for WEP
+- TKIP encryption
+- Better but still vulnerable
+
+#### WPA2 (802.11i)
+- **Current standard**
+- AES encryption (CCMP)
+- Two modes:
+  - **WPA2-Personal (PSK)**: Pre-shared key, home use
+  - **WPA2-Enterprise**: 802.1X authentication, RADIUS server
+
+#### WPA3
+- **Latest standard** (2018)
+- Stronger encryption (192-bit for Enterprise)
+- Protection against offline dictionary attacks
+- Forward secrecy
+- Simplified device setup (Wi-Fi Easy Connect)
+
+**Modes:**
+- **WPA3-Personal**: SAE (Simultaneous Authentication of Equals)
+- **WPA3-Enterprise**: 802.1X with 192-bit security
+
+#### Authentication Methods
+
+**Pre-Shared Key (PSK)**
+- Password known by all users
+- Same key for everyone
+- Suitable for home/small office
+
+**802.1X / EAP (Enterprise)**
+- Individual user credentials
+- RADIUS server authentication
+- Certificate-based or username/password
+- Accounting and logging
+
+### Wireless Guest Networks
+
+**Purpose:** Provide Internet access to visitors without compromising corporate network security
+
+**Key Requirements:**
+- **Separate SSID**: Different from corporate wireless
+- **VLAN isolation**: Guest traffic on dedicated VLAN
+- **Firewall rules**: Block access to internal resources
+- **Bandwidth limits**: Prevent network congestion
+- **Captive portal**: Terms of service, authentication
+
+**Configuration Example:**
+
+**On Wireless Controller or AP:**
+```
+! Create guest SSID
+wlan guest-wifi 2
+ ssid GUEST-NETWORK
+ security wpa2 psk ascii GuestPass123
+ guest-mode
+ 
+! Assign to guest VLAN
+interface vlan 50
+ name GUEST-VLAN
+ 
+! Map WLAN to VLAN
+wlan guest-wifi 2
+ vlan 50
+```
+
+**On Router/Firewall:**
+```
+! ACL to restrict guest access
+access-list 150 deny ip 192.168.50.0 0.0.0.255 192.168.0.0 0.0.255.255
+access-list 150 permit ip 192.168.50.0 0.0.0.255 any
+
+interface vlan 50
+ ip address 192.168.50.1 255.255.255.0
+ ip access-group 150 in
+ 
+! DHCP for guests
+ip dhcp pool GUEST-POOL
+ network 192.168.50.0 255.255.255.0
+ default-router 192.168.50.1
+ dns-server 8.8.8.8
+ lease 0 2 0  ! 2-hour lease
+```
+
+**Best Practices:**
+- Use WPA2 or WPA3 (even for guests)
+- Short DHCP lease times
+- Rate limiting per client
+- Disable access to printer/file shares
+- Monitor and log guest activity
+- Automatic disconnect after time period
+- Captive portal with terms acceptance
+
+### Wireless Site Surveys
+
+**Purpose:** Assess RF environment before deploying wireless network
+
+**Why Conduct a Site Survey?**
+- Determine optimal AP placement
+- Identify interference sources
+- Ensure adequate coverage
+- Plan for capacity requirements
+- Document RF baseline
+
+**Types of Site Surveys:**
+
+**1. Passive Survey**
+- Walk around with survey tool
+- Measure existing RF signals
+- Identify interference
+- No AP configuration needed
+
+**2. Active Survey**
+- Deploy temporary APs
+- Test actual performance
+- Measure throughput, latency
+- Validate coverage
+
+**3. Predictive Survey**
+- Software-based modeling
+- Uses floor plans
+- Estimates coverage
+- Good for planning, not deployment validation
+
+**Survey Process:**
+
+1. **Pre-Survey Planning**
+   - Obtain floor plans
+   - Identify AP mounting locations
+   - Note building materials (concrete, metal, glass)
+   - Determine coverage requirements
+
+2. **Conduct Survey**
+   - Walk entire area in grid pattern
+   - Measure signal strength at multiple points
+   - Note dead zones
+   - Test from client perspective
+
+3. **Analyze Results**
+   - Generate heat maps
+   - Identify coverage gaps
+   - Determine AP quantity and placement
+   - Plan channel assignments
+
+4. **Post-Deployment Validation**
+   - Verify coverage matches plan
+   - Test actual throughput
+   - Adjust AP power/channels as needed
+
+**Key Metrics:**
+- **RSSI (Received Signal Strength Indicator)**: Measured in dBm
+  - Excellent: -30 to -50 dBm
+  - Good: -50 to -60 dBm
+  - Fair: -60 to -70 dBm
+  - Poor: < -70 dBm
+- **SNR (Signal-to-Noise Ratio)**: Signal vs. background noise
+  - Excellent: > 40 dB
+  - Good: 25-40 dB
+  - Fair: 15-25 dB
+  - Poor: < 15 dB
+- **Channel utilization**: Percentage of airtime used
+- **Interference**: Non-Wi-Fi sources (microwaves, Bluetooth)
+
+**Survey Tools:**
+- Ekahau Site Survey (professional)
+- AirMagnet Survey (professional)
+- NetSpot (affordable)
+- WiFi Analyzer (mobile apps)
+- Cisco Prime Infrastructure
+
+**Common Issues Found:**
+- Insufficient AP coverage
+- Co-channel interference (multiple APs same channel)
+- Adjacent channel interference
+- Physical obstructions
+- External interference sources
+- Poor AP placement (in ceiling vs. on wall)
+
+**Survey Best Practices:**
+- Survey during normal business hours (identify interference)
+- Test at different times of day
+- Consider future growth
+- Account for building changes
+- Document everything
+- Re-survey after changes
+
+### Wireless LAN Controllers (WLC) - Detailed
+
+**Architecture Models:**
+
+**1. Autonomous AP**
+- Standalone, self-contained
+- Each AP configured individually
+- Good for small deployments (< 10 APs)
+
+**2. Lightweight AP + WLC (Split-MAC)**
+- AP handles real-time functions (transmit, receive)
+- WLC handles management functions (authentication, policies)
+- Centralized management
+- Scalable to thousands of APs
+
+**CAPWAP (Control and Provisioning of Wireless Access Points):**
+- Protocol for AP-to-WLC communication
+- Two tunnels:
+  - **Control tunnel**: Management, configuration (encrypted, UDP 5246)
+  - **Data tunnel**: Client traffic (optional encryption, UDP 5247)
+- APs and WLC can be on different subnets
+- Encrypted by default (DTLS)
+
+**WLC Functions:**
+- Centralized configuration
+- RF management (power, channel assignments)
+- Roaming support
+- Security policy enforcement
+- Guest access management
+- QoS policies
+
+**AP Discovery Process:**
+1. AP boots, gets IP via DHCP
+2. AP discovers WLC (DHCP option, DNS, broadcast)
+3. AP establishes CAPWAP tunnel to WLC
+4. WLC pushes configuration to AP
+5. AP begins serving clients
+
+**Advantages of WLC Architecture:**
+- Simplified management (configure once)
+- Seamless roaming (controller handles)
+- Centralized security
+- RF optimization
+- Scalability
+
+**Verification:**
+```
+show wlan summary
+show ap summary
+show client summary
+```
 
 ### Wireless Configuration
 
@@ -3721,24 +4430,6 @@ connection.disconnect()
 ---
 
 ## Summary
-
-These notes cover the core topics for CCNA certification:
-
-✅ Network fundamentals and history  
-✅ OSI and TCP/IP models  
-✅ IPv4 addressing and subnetting  
-✅ IPv6 addressing and configuration  
-✅ Network applications (DNS, DHCP, HTTP)  
-✅ Routing (static and dynamic)  
-✅ Switching and VLANs  
-✅ Wireless networking  
-✅ WAN technologies  
-✅ Network management  
-✅ Security fundamentals  
-✅ Automation and cloud concepts  
-
-**Good luck with your CCNA studies!** Remember: practice, understand concepts, and use the troubleshooting methodology. The CCNA certification opens doors to exciting networking careers.→ Subnet 65,535
-```
 
 **Simplified notation:**
 ```
