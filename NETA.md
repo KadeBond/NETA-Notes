@@ -1,6 +1,3 @@
-# NETA Notes
-## Comprehensive Networking Fundamentals
-
 ---
 
 # NETA Notes
