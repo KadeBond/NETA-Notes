@@ -1,5 +1,132 @@
-# CCNA Complete Study Notes
+# NETA Notes
 ## Comprehensive Networking Fundamentals
+
+---
+
+# NETA Notes
+## Comprehensive Networking Fundamentals
+
+---
+
+## Table of Contents
+
+### 1. [Historical Development of Networking Technologies](#1-historical-development-of-networking-technologies)
+- [Early Computer Connections](#early-computer-connections-1960s-1970s)
+- [The Ethernet Revolution](#the-ethernet-revolution-1970s-1980s)
+- [Modern Era Milestones](#modern-era-milestones-1990s-present)
+- [Impact on Society](#impact-on-society)
+- [Comparison: Then vs. Now](#comparison-then-vs-now)
+
+### 2. [OSI and TCP/IP Models](#2-osi-and-tcpip-models)
+- [OSI Model - 7 Layers](#osi-model-open-systems-interconnection)
+- [TCP/IP Model - 4 Layers](#tcpip-model-internet-protocol-suite)
+- [Data Flow Through Layers](#data-flow-through-the-layers)
+- [Protocol Matching](#protocol-matching-exercise)
+
+### 3. [IPv4 Addressing](#3-ipv4-addressing)
+- [IPv4 Address Classes](#ipv4-address-classes)
+- [Private vs. Public Addresses](#private-vs-public-addresses)
+- [Special Addresses](#special-addresses)
+- [Binary and Decimal Conversion](#binary-and-decimal-representation)
+- [Subnet Masks](#subnet-masks)
+- [Subnetting (FLSM and VLSM)](#subnetting)
+- [Configuring IPv4](#configuring-ipv4-addresses)
+- [Troubleshooting IPv4](#troubleshooting-ipv4-addressing)
+
+### 4. [Building Small Networks](#4-building-small-networks)
+- [Network Components](#network-components)
+- [Cable Types](#cable-types-and-standards)
+- [Physical LAN Setup](#physical-setup-of-a-lan)
+- [Basic Device Configuration](#basic-device-configuration)
+- [IP Assignment Methods (Static/DHCP)](#ip-address-assignment-methods)
+- [Testing and Verification](#testing-and-verification)
+
+### 5. [IP Routing Fundamentals](#5-ip-routing-fundamentals)
+- [How Routers Work](#how-routers-work)
+- [Types of Routes](#types-of-routes)
+- [Administrative Distance](#administrative-distance-ad)
+- [Configuring Static Routes](#configuring-static-routes)
+- [Routing Table Interpretation](#routing-table-interpretation)
+- [Designing Internetworks](#designing-an-internetwork-with-static-routes)
+- [Troubleshooting Routing](#troubleshooting-routing-issues)
+
+### 6. [Network Applications and Protocols](#6-network-applications-and-protocols)
+- [DNS (Domain Name System)](#dns-domain-name-system)
+- [DHCP (Dynamic Host Configuration)](#dhcp-dynamic-host-configuration-protocol)
+- [HTTP/HTTPS](#httphttps-hypertext-transfer-protocol)
+- [Wireshark Protocol Analysis](#protocol-analysis-with-wireshark)
+- [Application Layer Security](#application-layer-security-concerns)
+
+### 7. [IPv6 Addressing](#7-ipv6-addressing)
+- [Need for IPv6](#limitations-of-ipv4-and-need-for-ipv6)
+- [IPv6 Address Structure](#ipv6-address-structure)
+- [IPv6 Address Types](#ipv6-address-types)
+- [Configuration Methods (SLAAC, DHCPv6, EUI-64)](#ipv6-address-configuration-methods)
+- [Neighbor Discovery Protocol](#neighbor-discovery-protocol-ndp)
+- [IPv6 Subnetting](#ipv6-subnetting)
+- [IPv6 Routing](#ipv6-routing)
+- [Troubleshooting IPv6](#troubleshooting-ipv6)
+- [IPv4/IPv6 Coexistence](#ipv4ipv6-coexistence-strategies)
+
+### 8. [Switching Concepts](#8-switching-concepts)
+- [Ethernet Switching Basics](#ethernet-switching)
+- [VLANs](#vlans-virtual-local-area-networks)
+- [Trunk Links](#trunk-links)
+- [Inter-VLAN Routing](#inter-vlan-routing)
+- [VTP (VLAN Trunking Protocol)](#vtp-vlan-trunking-protocol)
+- [Switch Security](#switch-security)
+- [Spanning Tree Protocol (STP)](#spanning-tree-protocol-stp)
+- [EtherChannel](#etherchannel)
+- [HSRP, VRRP, GLBP](#hsrp-vrrp-and-glbp-first-hop-redundancy-protocols)
+
+### 9. [Wireless Networking](#9-wireless-networking)
+- [Wireless Components](#wireless-lan-components)
+- [Wireless Standards](#wireless-standards-80211)
+- [Frequency Bands](#wireless-frequency-bands)
+- [Wireless Topologies](#wireless-topologies)
+- [Wireless Security](#wireless-security)
+- [Wireless Configuration](#wireless-configuration)
+- [Wireless Troubleshooting](#wireless-troubleshooting)
+
+### 10. [Dynamic Routing Protocols](#10-dynamic-routing-protocols)
+- [Routing Protocol Basics](#routing-protocol-basics)
+- [RIP](#rip-routing-information-protocol)
+- [EIGRP](#eigrp-enhanced-interior-gateway-routing-protocol)
+- [OSPF](#ospf-open-shortest-path-first)
+- [Protocol Comparison](#protocol-comparison)
+- [Route Redistribution](#route-redistribution)
+
+### 11. [WAN Technologies](#11-wan-technologies)
+- [WAN Overview](#wan-overview)
+- [WAN Connection Types](#wan-connection-types)
+- [PPP](#ppp-point-to-point-protocol)
+- [VPN](#vpn-virtual-private-network)
+- [GRE Tunnels](#gre-generic-routing-encapsulation)
+
+### 12. [Network Management](#12-network-management)
+- [Network Documentation](#network-documentation)
+- [SNMP](#snmp-simple-network-management-protocol)
+- [Syslog](#syslog)
+- [NTP](#ntp-network-time-protocol)
+- [CDP and LLDP](#cdp-and-lldp-discovery-protocols)
+- [Device Management Best Practices](#device-management-best-practices)
+
+### 13. [Network Security Fundamentals](#13-network-security-fundamentals)
+- [Security Threats](#security-threats)
+- [Defense in Depth](#defense-in-depth)
+- [Access Control Lists (ACLs)](#access-control-lists-acls)
+- [NAT/PAT](#nat-network-address-translation)
+- [Firewalls](#firewalls)
+- [Security Best Practices](#security-best-practices-summary)
+
+### 14. [Additional CCNA Topics](#14-additional-ccna-topics)
+- [Network Automation](#network-automation)
+- [Quality of Service (QoS)](#quality-of-service-qos)
+- [Cloud Computing](#cloud-computing)
+- [SDN](#sdn-software-defined-networking)
+- [Troubleshooting Methodology](#network-troubleshooting-methodology)
+- [Command Summary](#command-summary---most-important)
+- [Study Tips](#final-exam-tips)
 
 ---
 
@@ -3613,6 +3740,7 @@ These notes cover the core topics for CCNA certification:
 ✅ Security fundamentals  
 ✅ Automation and cloud concepts  
 
+**Good luck with your CCNA studies!** Remember: practice, understand concepts, and use the troubleshooting methodology. The CCNA certification opens doors to exciting networking careers.→ Subnet 65,535
 ```
 
 **Simplified notation:**
