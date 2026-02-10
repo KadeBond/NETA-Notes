@@ -2764,7 +2764,7 @@ show etherchannel summary
 show etherchannel port-channel
 show interfaces port-channel 1
 ```
-
+```
 show etherchannel port-channel
 show interfaces port-channel 1
 ```
