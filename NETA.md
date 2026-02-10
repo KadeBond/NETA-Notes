@@ -6,21 +6,25 @@
 ## Table of Contents
 
 ### 1. [Historical Development of Networking Technologies](#1-historical-development-of-networking-technologies)
-- [Early Computer Connections](#early-computer-connections-1960s-1970s)
-- [The Ethernet Revolution](#the-ethernet-revolution-1970s-1980s)
-- [Modern Era Milestones](#modern-era-milestones-1990s-present)
+- [Early Computer Connections (1960s-1970s)](#early-computer-connections-1960s-1970s)
+- [The Ethernet Revolution (1970s-1980s)](#the-ethernet-revolution-1970s-1980s)
+- [Internet Protocol Suite (1980s)](#internet-protocol-suite-1980s)
+- [Modern Era Milestones (1990s-Present)](#modern-era-milestones-1990s-present)
 - [Impact on Society](#impact-on-society)
 - [Comparison: Then vs. Now](#comparison-then-vs-now)
+- [Future Innovations & IT Careers](#future-innovations--it-careers)
 
 ### 2. [OSI and TCP/IP Models](#2-osi-and-tcpip-models)
-- [OSI Model - 7 Layers](#osi-model-open-systems-interconnection)
-- [TCP/IP Model - 4 Layers](#tcpip-model-internet-protocol-suite)
+- [OSI Model (7 Layers)](#osi-model-open-systems-interconnection)
+- [TCP/IP Model (4 Layers)](#tcpip-model-internet-protocol-suite)
 - [Data Flow Through Layers](#data-flow-through-the-layers)
 - [Protocol Matching](#protocol-matching-exercise)
 
 ### 3. [IPv4 Addressing](#3-ipv4-addressing)
+- [Definition and Purpose](#definition-and-purpose)
+- [IPv4 vs IPv6](#ipv4-vs-ipv6-brief-contrast)
 - [IPv4 Address Classes](#ipv4-address-classes)
-- [Private vs. Public Addresses](#private-vs-public-addresses)
+- [Private vs Public Addresses](#private-vs-public-addresses)
 - [Special Addresses](#special-addresses)
 - [Binary and Decimal Conversion](#binary-and-decimal-representation)
 - [Subnet Masks](#subnet-masks)
@@ -33,16 +37,19 @@
 - [Cable Types](#cable-types-and-standards)
 - [Physical LAN Setup](#physical-setup-of-a-lan)
 - [Basic Device Configuration](#basic-device-configuration)
-- [IP Assignment Methods (Static/DHCP)](#ip-address-assignment-methods)
+- [IP Assignment Methods](#ip-address-assignment-methods)
 - [Testing and Verification](#testing-and-verification)
+- [Troubleshooting Connectivity](#troubleshooting-connectivity-issues)
 
 ### 5. [IP Routing Fundamentals](#5-ip-routing-fundamentals)
+- [Purpose of IP Routing](#purpose-of-ip-routing)
 - [How Routers Work](#how-routers-work)
 - [Types of Routes](#types-of-routes)
 - [Administrative Distance](#administrative-distance-ad)
 - [Configuring Static Routes](#configuring-static-routes)
 - [Routing Table Interpretation](#routing-table-interpretation)
 - [Designing Internetworks](#designing-an-internetwork-with-static-routes)
+- [Analyzing Packet Flow](#analyzing-packet-flow)
 - [Troubleshooting Routing](#troubleshooting-routing-issues)
 
 ### 6. [Network Applications and Protocols](#6-network-applications-and-protocols)
@@ -56,7 +63,7 @@
 - [Need for IPv6](#limitations-of-ipv4-and-need-for-ipv6)
 - [IPv6 Address Structure](#ipv6-address-structure)
 - [IPv6 Address Types](#ipv6-address-types)
-- [Configuration Methods (SLAAC, DHCPv6, EUI-64)](#ipv6-address-configuration-methods)
+- [Configuration Methods](#ipv6-address-configuration-methods)
 - [Neighbor Discovery Protocol](#neighbor-discovery-protocol-ndp)
 - [IPv6 Subnetting](#ipv6-subnetting)
 - [IPv6 Routing](#ipv6-routing)
@@ -65,13 +72,18 @@
 
 ### 8. [Switching Concepts](#8-switching-concepts)
 - [Ethernet Switching Basics](#ethernet-switching)
+- [MAC Address Table](#mac-address-table-cam-table)
+- [Frame Switching Methods](#frame-switching-methods)
 - [VLANs](#vlans-virtual-local-area-networks)
 - [Trunk Links](#trunk-links)
+- [Native VLAN Security](#native-vlan-security)
 - [Inter-VLAN Routing](#inter-vlan-routing)
+- [Router-on-a-Stick Limitations](#router-on-a-stick-limitations)
 - [VTP (VLAN Trunking Protocol)](#vtp-vlan-trunking-protocol)
 - [Switch Security](#switch-security)
 - [Spanning Tree Protocol (STP)](#spanning-tree-protocol-stp)
 - [EtherChannel](#etherchannel)
+- [Switch Stacking](#switch-stacking)
 - [HSRP, VRRP, GLBP](#hsrp-vrrp-and-glbp-first-hop-redundancy-protocols)
 
 ### 9. [Wireless Networking](#9-wireless-networking)
@@ -80,6 +92,9 @@
 - [Frequency Bands](#wireless-frequency-bands)
 - [Wireless Topologies](#wireless-topologies)
 - [Wireless Security](#wireless-security)
+- [Wireless Guest Networks](#wireless-guest-networks)
+- [Wireless Site Surveys](#wireless-site-surveys)
+- [WLC Detailed](#wireless-lan-controllers-wlc---detailed)
 - [Wireless Configuration](#wireless-configuration)
 - [Wireless Troubleshooting](#wireless-troubleshooting)
 
@@ -114,14 +129,13 @@
 - [Firewalls](#firewalls)
 - [Security Best Practices](#security-best-practices-summary)
 
-### 14. [Additional CCNA Topics](#14-additional-ccna-topics)
+### 14. [Additional Topics](#14-additional-ccna-topics)
 - [Network Automation](#network-automation)
 - [Quality of Service (QoS)](#quality-of-service-qos)
 - [Cloud Computing](#cloud-computing)
 - [SDN](#sdn-software-defined-networking)
 - [Troubleshooting Methodology](#network-troubleshooting-methodology)
 - [Command Summary](#command-summary---most-important)
-- [Study Tips](#final-exam-tips)
 
 ---
 
@@ -4416,6 +4430,16 @@ connection.disconnect()
 - `traceroute <ip>` - Trace packet path
 - `show cdp neighbors` - View connected devices
 - `show version` - IOS version and hardware info
+
+#### Study Strategy
+1. **Hands-on practice**: Use Packet Tracer extensively
+2. **Understand concepts**: Don't just memorize commands
+3. **Layer approach**: Think in terms of OSI model
+4. **Practice subnetting**: Until it's automatic
+5. **Know troubleshooting**: Use systematic methodology
+6. **Review wrong answers**: Learn from mistakes
+7. **Time management**: Don't spend too long on one question
+8. **Read carefully**: Questions may have tricky wording
 
 ---
 
