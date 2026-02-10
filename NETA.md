@@ -4417,16 +4417,6 @@ connection.disconnect()
 - `show cdp neighbors` - View connected devices
 - `show version` - IOS version and hardware info
 
-#### Study Strategy
-1. **Hands-on practice**: Use Packet Tracer extensively
-2. **Understand concepts**: Don't just memorize commands
-3. **Layer approach**: Think in terms of OSI model
-4. **Practice subnetting**: Until it's automatic
-5. **Know troubleshooting**: Use systematic methodology
-6. **Review wrong answers**: Learn from mistakes
-7. **Time management**: Don't spend too long on one question
-8. **Read carefully**: Questions may have tricky wording
-
 ---
 
 ## Summary
