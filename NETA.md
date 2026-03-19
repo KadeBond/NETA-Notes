@@ -3391,59 +3391,540 @@ show ip route eigrp
 - **Multicast**: 224.0.0.5 (AllSPFRouters), 224.0.0.6 (AllDRRouters)
 - **Administrative Distance**: 110
 
-#### OSPF Operation
-1. **Discover neighbors**: Hello packets every 10 seconds
-2. **Exchange link-state database**: Flooding LSAs
-3. **Calculate best paths**: SPF algorithm
-4. **Update routing table**: Install best routes
+#### OSPF Features and Characteristics
 
-#### OSPF Areas
-- **Area 0 (Backbone)**: Must exist, all areas connect to it
-- **Regular areas**: Connect to Area 0
-- **Stub areas**: Don't receive external routes
-- **Totally stubby areas**: Only default route
-- **NSSA**: Allows limited external routes
+**Advantages:**
+- Fast convergence
+- No hop count limit
+- Scalable for large networks
+- Support for VLSM and CIDR
+- Efficient use of bandwidth (incremental updates)
+- Multiple equal-cost paths (load balancing)
+- Hierarchical design with areas
 
-#### OSPF Configuration (Single Area)
+**Cost Calculation:**
+
+OSPF uses **cost** as its metric, calculated as:
+
+**Cost = Reference Bandwidth / Interface Bandwidth**
+
+**Default reference bandwidth**: 100 Mbps (10^8 bps)
+
+**Cost formula:**
+```
+Cost = 100,000,000 / bandwidth in bps
+```
+
+**Default costs:**
+- **10 Mbps (Ethernet)**: 100,000,000 / 10,000,000 = 10
+- **100 Mbps (FastEthernet)**: 100,000,000 / 100,000,000 = 1
+- **1 Gbps (GigabitEthernet)**: 100,000,000 / 1,000,000,000 = 1 (rounded)
+- **10 Gbps**: 100,000,000 / 10,000,000,000 = 1 (rounded)
+
+**Problem**: GigabitEthernet and 10GigE both show cost of 1 with default reference bandwidth.
+
+**Solution**: Adjust reference bandwidth to handle faster interfaces:
+```
+Router(config)# router ospf 1
+Router(config-router)# auto-cost reference-bandwidth 10000
+```
+*Sets reference to 10,000 Mbps (10 Gbps)*
+
+**New costs with reference-bandwidth 10000:**
+- **FastEthernet (100 Mbps)**: 10,000 / 100 = 100
+- **GigabitEthernet (1 Gbps)**: 10,000 / 1,000 = 10
+- **10 GigE**: 10,000 / 10,000 = 1
+
+**Manually set interface cost:**
+```
+Router(config)# interface gigabitEthernet 0/0
+Router(config-if)# ip ospf cost 50
+```
+
+**View interface cost:**
+```
+Router# show ip ospf interface gigabitEthernet 0/0
+```
+
+**OSPF Timers:**
+
+**Hello Interval:**
+- **Broadcast/Point-to-point networks**: 10 seconds
+- **Non-broadcast networks**: 30 seconds
+- Sent to discover and maintain neighbors
+
+**Dead Interval:**
+- **Default**: 4 x Hello interval
+- **Broadcast/Point-to-point**: 40 seconds
+- **Non-broadcast**: 120 seconds
+- If no hello received within dead interval, neighbor declared down
+
+**Modify timers (must match on both routers):**
+```
+Router(config)# interface gigabitEthernet 0/0
+Router(config-if)# ip ospf hello-interval 5
+Router(config-if)# ip ospf dead-interval 20
+```
+
+**Important**: Timers must match between neighbors or adjacency won't form.
+
+#### OSPF Packets
+
+OSPF uses **5 packet types** for communication:
+
+**1. Hello Packet (Type 1)**
+
+**Purpose:**
+- Discover OSPF neighbors
+- Establish neighbor adjacencies
+- Maintain neighbor relationships (keepalive)
+- Elect DR/BDR on multi-access networks
+
+**Contains:**
+- Router ID
+- Area ID
+- Hello/Dead intervals
+- Network mask
+- Router priority
+- DR and BDR IP addresses
+- List of neighbors
+- Authentication information
+
+**Sent to**: 224.0.0.5 (AllSPFRouters)
+**Frequency**: Every 10 seconds (broadcast), 30 seconds (NBMA)
+
+**Hello packet fields must match for adjacency:**
+- Area ID
+- Hello/Dead intervals
+- Network mask (on broadcast networks)
+- Authentication
+- Stub area flag
+
+**2. Database Description (DBD/DD) Packet (Type 2)**
+
+**Purpose:**
+- Exchange summary of LSDB (Link-State Database)
+- Occurs during neighbor adjacency formation
+- Contains headers of LSAs (not full LSAs)
+
+**Process:**
+- Master/slave relationship established
+- Master sends DBD first
+- Slave responds
+- Each DBD acknowledged
+
+**Contains:**
+- Summary of each LSA in LSDB
+- LSA headers (type, ID, sequence number)
+
+**3. Link-State Request (LSR) Packet (Type 3)**
+
+**Purpose:**
+- Request specific LSAs from neighbor
+- Sent after examining DBD packets
+- Requests LSAs that are missing or outdated
+
+**Contains:**
+- List of LSAs needed (identified by type and ID)
+
+**4. Link-State Update (LSU) Packet (Type 4)**
+
+**Purpose:**
+- Send requested LSAs
+- Flood new/updated LSAs
+- Response to LSR packets
+
+**Contains:**
+- Full LSA information
+- Can contain multiple LSAs
+
+**Sent to**: 
+- 224.0.0.5 (AllSPFRouters) for flooding
+- Unicast for LSR responses
+
+**5. Link-State Acknowledgment (LSAck) Packet (Type 5)**
+
+**Purpose:**
+- Acknowledge receipt of LSU
+- Ensures reliable flooding
+
+**Contains:**
+- LSA headers of acknowledged LSAs
+
+**Summary of OSPF Packet Types:**
+
+| Type | Name | Purpose |
+|------|------|---------|
+| 1 | Hello | Discover/maintain neighbors, elect DR/BDR |
+| 2 | DBD | Exchange LSDB summaries |
+| 3 | LSR | Request specific LSAs |
+| 4 | LSU | Send LSA information |
+| 5 | LSAck | Acknowledge LSAs received |
+
+#### OSPF Neighbor States
+
+OSPF routers progress through states when forming adjacencies:
+
+**1. Down State**
+- Initial state
+- No hello packets received
+- Router sends hello packets
+
+**2. Init State**
+- Hello packet received from neighbor
+- Contains sending router's Router ID
+- Two-way communication not yet confirmed
+
+**3. Two-Way State**
+- Router sees its own Router ID in neighbor's hello packet
+- Bidirectional communication confirmed
+- DR/BDR election occurs (if multi-access network)
+- **Adjacency stops here for non-DR/BDR routers on multi-access networks**
+
+**4. ExStart State**
+- Routers establish master/slave relationship
+- Master has higher Router ID
+- Master initiates DBD exchange
+
+**5. Exchange State**
+- Routers exchange DBD packets
+- Contains LSA headers (summaries)
+- Each router catalogs what LSAs it needs
+
+**6. Loading State**
+- Routers request needed LSAs (LSR packets)
+- Receive LSAs (LSU packets)
+- Acknowledge LSAs (LSAck packets)
+
+**7. Full State**
+- LSDB fully synchronized
+- Routers are fully adjacent
+- Normal operation state
+
+**State Progression:**
+```
+Down → Init → Two-Way → ExStart → Exchange → Loading → Full
+```
+
+**View neighbor states:**
+```
+Router# show ip ospf neighbor
+
+Neighbor ID     Pri   State           Dead Time   Address         Interface
+1.1.1.1          1    FULL/DR         00:00:35    192.168.1.1     Gig0/0
+2.2.2.2          1    2WAY/DROTHER    00:00:38    192.168.1.2     Gig0/0
+```
+
+**State meanings:**
+- **FULL**: Complete adjacency, LSDB synchronized
+- **2WAY**: Bidirectional communication, but not adjacent (normal for non-DR/BDR)
+- **INIT**: Hello received, but bidirectional not confirmed
+- **EXSTART/EXCHANGE/LOADING**: In process of synchronizing
+
+#### OSPF LSA Types
+
+**LSA (Link-State Advertisement)**
+
+**Common LSA Types:**
+
+**Type 1: Router LSA**
+- Generated by every OSPF router
+- Describes router's links within an area
+- Flooded only within the area
+- Contains: Router ID, interface IPs, states, costs
+
+**Type 2: Network LSA**
+- Generated by DR on multi-access networks
+- Describes all routers on the segment
+- Flooded only within the area
+- Contains: List of routers on the segment
+
+**Type 3: Summary LSA**
+- Generated by ABR (Area Border Router)
+- Advertises networks from one area into another
+- Summarizes inter-area routes
+- Does NOT contain topology details
+
+**Type 4: ASBR Summary LSA**
+- Generated by ABR
+- Advertises location of ASBR
+- Tells routers how to reach external routes
+
+**Type 5: External LSA**
+- Generated by ASBR (Autonomous System Boundary Router)
+- Advertises routes external to OSPF (redistributed routes)
+- Flooded throughout entire OSPF domain (except stub areas)
+- Contains: External network, metric, external metric type
+
+**Type 7: NSSA External LSA**
+- Generated by ASBR in NSSA (Not-So-Stubby Area)
+- Similar to Type 5 but only within NSSA
+- Converted to Type 5 by ABR when leaving NSSA
+
+**LSA Summary Table:**
+
+| Type | Name | Generated By | Flooded To | Purpose |
+|------|------|--------------|------------|---------|
+| 1 | Router | All routers | Within area | Router's links |
+| 2 | Network | DR | Within area | Multi-access segment |
+| 3 | Summary | ABR | Other areas | Inter-area routes |
+| 4 | ASBR Summary | ABR | Other areas | Path to ASBR |
+| 5 | External | ASBR | All areas (except stub) | External routes |
+| 7 | NSSA External | ASBR (in NSSA) | Within NSSA | External routes in NSSA |
+
+**View LSAs:**
+```
+Router# show ip ospf database
+
+            OSPF Router with ID (1.1.1.1)
+
+                Router Link States (Area 0)
+
+Link ID         ADV Router      Age         Seq#       Checksum
+1.1.1.1         1.1.1.1         532         0x80000003 0x004D27
+2.2.2.2         2.2.2.2         517         0x80000004 0x00B541
+
+                Net Link States (Area 0)
+
+Link ID         ADV Router      Age         Seq#       Checksum
+192.168.1.1     1.1.1.1         532         0x80000001 0x00E813
+```
+
+#### OSPF Operation - Detailed Process
+
+**Step-by-Step OSPF Neighbor Adjacency:**
+
+**1. Down → Init**
+- Router A sends Hello to 224.0.0.5
+- Router B receives Hello
+- Router B moves to Init state
+
+**2. Init → Two-Way**
+- Router B sends Hello with Router A's ID in neighbor list
+- Router A receives Hello with its own ID
+- Router A moves to Two-Way state
+- **DR/BDR election occurs here (if multi-access)**
+
+**3. Two-Way → ExStart**
+- Routers decide to form adjacency (if DR/DBR relationship)
+- Determine master/slave (higher Router ID = master)
+- Empty DBD packets exchanged to establish relationship
+
+**4. ExStart → Exchange**
+- Master sends DBD with LSA headers
+- Slave acknowledges and sends its DBD
+- Continue until all LSA headers exchanged
+
+**5. Exchange → Loading**
+- Each router compares received LSA headers with its LSDB
+- Sends LSR for missing/outdated LSAs
+- Receives LSU containing full LSAs
+- Sends LSAck to acknowledge
+
+**6. Loading → Full**
+- All requested LSAs received
+- LSDB synchronized
+- Full adjacency established
+- Run SPF algorithm to calculate best paths
+
+**OSPF SPF Algorithm Process:**
+
+**1. Build Link-State Database**
+- Collect all LSAs
+- Build complete view of area topology
+
+**2. Run Dijkstra's SPF Algorithm**
+- Router places itself as root of tree
+- Calculates shortest path to each destination
+- Uses cumulative cost
+
+**3. Populate Routing Table**
+- Install best routes (lowest cost)
+- Multiple equal-cost paths allowed (up to 4 by default)
+
+**SPF Calculation Triggers:**
+- New LSA received
+- LSA aged out
+- Network topology change
+
+**SPF Throttling:**
+- Prevents excessive SPF calculations
+- Delays between calculations increase with instability
+- Helps stabilize network during rapid changes
+
+**Configure SPF timers:**
+```
+Router(config-router)# timers throttle spf 5000 10000 20000
+```
+*5s initial delay, 10s between calculations, 20s max wait*
+
+#### OSPF Configuration - Complete Example
+
+**Scenario: Three-router OSPF network, Area 0**
+
+**Router 1:**
 ```
 Router(config)# router ospf 1
 Router(config-router)# router-id 1.1.1.1
+Router(config-router)# auto-cost reference-bandwidth 10000
 Router(config-router)# network 192.168.1.0 0.0.0.255 area 0
 Router(config-router)# network 10.1.1.0 0.0.0.3 area 0
-Router(config-router)# passive-interface gigabitEthernet 0/2
-```
+Router(config-router)# passive-interface GigabitEthernet0/2
+Router(config-router)# exit
 
-**Verification:**
-```
-show ip ospf neighbor
-show ip ospf interface
-show ip ospf database
-show ip protocols
-show ip route ospf
-```
-
-#### OSPF Router Types
-- **Internal Router**: All interfaces in same area
-- **Backbone Router**: At least one interface in Area 0
-- **ABR (Area Border Router)**: Connects multiple areas
-- **ASBR (Autonomous System Boundary Router)**: Connects to external networks
-
-#### OSPF Network Types
-- **Broadcast**: Ethernet (DR/BDR election)
-- **Point-to-point**: Serial links (no DR/BDR)
-- **Non-broadcast**: Frame Relay (manual neighbor config)
-
-#### DR/BDR Election
-- **DR (Designated Router)**: Reduces LSA flooding on multi-access networks
-- **BDR (Backup Designated Router)**: Backup for DR
-- **Election criteria**:
-  1. Highest priority (default 1, range 0-255)
-  2. Highest router ID
-- **Priority 0**: Never becomes DR/BDR
-
-```
+Router(config)# interface GigabitEthernet0/0
+Router(config-if)# ip ospf hello-interval 10
+Router(config-if)# ip ospf dead-interval 40
 Router(config-if)# ip ospf priority 100
 ```
+
+**Router 2:**
+```
+Router(config)# router ospf 1
+Router(config-router)# router-id 2.2.2.2
+Router(config-router)# auto-cost reference-bandwidth 10000
+Router(config-router)# network 10.1.1.0 0.0.0.3 area 0
+Router(config-router)# network 10.1.1.4 0.0.0.3 area 0
+```
+
+**Router 3:**
+```
+Router(config)# router ospf 1
+Router(config-router)# router-id 3.3.3.3
+Router(config-router)# auto-cost reference-bandwidth 10000
+Router(config-router)# network 10.1.1.4 0.0.0.3 area 0
+Router(config-router)# network 172.16.0.0 0.0.255.255 area 0
+Router(config-router)# passive-interface GigabitEthernet0/1
+```
+
+#### OSPF Verification and Troubleshooting
+
+**Essential Verification Commands:**
+
+```
+show ip protocols
+```
+Shows OSPF process ID, router ID, networks, timers
+
+```
+show ip ospf neighbor
+```
+Shows neighbors, state, priority, DR/BDR
+
+```
+show ip ospf neighbor detail
+```
+Detailed neighbor information
+
+```
+show ip ospf interface
+```
+Shows OSPF-enabled interfaces, cost, priority, timers, DR/BDR
+
+```
+show ip ospf interface brief
+```
+Summary of OSPF interfaces
+
+```
+show ip ospf database
+```
+Shows LSDB contents (all LSAs)
+
+```
+show ip route ospf
+```
+Shows only OSPF routes in routing table
+
+```
+show ip ospf
+```
+Shows OSPF process information, timers, SPF statistics
+
+```
+debug ip ospf adj
+```
+Debug neighbor adjacency formation (use carefully!)
+
+```
+debug ip ospf packet
+```
+Debug OSPF packets (use carefully!)
+
+**Common OSPF Problems:**
+
+**1. Neighbors Not Forming**
+
+**Check:**
+- Are interfaces up? `show ip interface brief`
+- Same area? `show ip protocols`
+- Same subnet? `show ip interface`
+- Matching hello/dead timers? `show ip ospf interface`
+- Matching authentication? `show ip ospf interface`
+- Matching stub flag?
+- Can ping neighbor?
+
+**2. Stuck in Init or ExStart**
+
+**Causes:**
+- Mismatched MTU
+- Access list blocking OSPF packets
+- One-way communication
+
+**Solution:**
+```
+show ip ospf interface
+```
+Check for mismatched MTU, adjust if needed:
+```
+Router(config-if)# ip mtu 1500
+Router(config-if)# ip ospf mtu-ignore
+```
+
+**3. Routes Not Appearing**
+
+**Check:**
+- OSPF running? `show ip protocols`
+- Network statements correct?
+- Area number correct?
+- Passive interface blocking?
+- Cost too high?
+
+**4. Flapping Neighbors**
+
+**Causes:**
+- Physical layer issues
+- Mismatched timers
+- High CPU
+
+**Solution:**
+- Check interface errors: `show interfaces`
+- Verify timers: `show ip ospf interface`
+- Check CPU: `show processes cpu`
+
+**5. Wrong DR/BDR Election**
+
+**Solution:**
+```
+Router(config-if)# ip ospf priority 255
+```
+Then clear OSPF process:
+```
+Router# clear ip ospf process
+```
+
+#### OSPF Best Practices
+
+1. **Use meaningful Router IDs**: Manually configure instead of relying on automatic selection
+2. **Adjust reference bandwidth**: Set to 10000 for networks with GigE or faster
+3. **Use passive interfaces**: On interfaces with no OSPF neighbors (saves resources)
+4. **Consistent timers**: Ensure hello/dead intervals match across neighbors
+5. **Plan area design**: Keep Area 0 contiguous, limit routers per area
+6. **Summarize routes**: At area boundaries to reduce LSA flooding
+7. **Authentication**: Use MD5 authentication for security
+8. **Monitor OSPF**: Watch for excessive LSA flooding or SPF calculations
+
+---
 
 ### Protocol Comparison
 
